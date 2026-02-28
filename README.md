@@ -5,14 +5,15 @@
 ████╗ ████║╚██╗ ██╔╝██╔════╝██╔═══██╗██║
 ██╔████╔██║ ╚████╔╝ ███████╗██║   ██║██║
 ██║╚██╔╝██║  ╚██╔╝  ╚════██║██║▄▄ ██║██║
-██║ ╚═╝ ██║   ██║   ███████║╚██████╔╝███████╗
-╚═╝     ╚═╝   ╚═╝   ╚══════╝ ╚══▀▀═╝ ╚══════╝
-███████╗ ██████╗ ██╗         ██╗███╗   ██╗████████╗███████╗██╗     ██╗     ██╗ ██████╗ ███████╗███╗   ██╗ ██████╗███████╗
-██╔════╝██╔═══██╗██║         ██║████╗  ██║╚══██╔══╝██╔════╝██║     ██║     ██║██╔════╝ ██╔════╝████╗  ██║██╔════╝██╔════╝
+     ██║ ╚═╝ ██║   ██║   ███████║╚██████╔╝███████╗
+     ╚═╝     ╚═╝   ╚═╝   ╚══════╝ ╚══▀▀═╝ ╚══════╝
+
+  ███████╗ ██████╗ ██╗         ██╗███╗   ██╗████████╗███████╗██╗     ██╗     ██╗ ██████╗ ███████╗███╗   ██╗ ██████╗███████╗
+  ██╔════╝██╔═══██╗██║         ██║████╗  ██║╚══██╔══╝██╔════╝██║     ██║     ██║██╔════╝ ██╔════╝████╗  ██║██╔════╝██╔════╝
 ███████╗██║   ██║██║         ██║██╔██╗ ██║   ██║   █████╗  ██║     ██║     ██║██║  ███╗█████╗  ██╔██╗ ██║██║     █████╗
 ╚════██║██║▄▄ ██║██║         ██║██║╚██╗██║   ██║   ██╔══╝  ██║     ██║     ██║██║   ██║██╔══╝  ██║╚██╗██║██║     ██╔══╝
-███████║╚██████╔╝███████╗    ██║██║ ╚████║   ██║   ███████╗███████╗███████╗██║╚██████╔╝███████╗██║ ╚████║╚██████╗███████╗
-╚══════╝ ╚══▀▀═╝ ╚══════╝    ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚══════╝
+  ███████║╚██████╔╝███████╗    ██║██║ ╚████║   ██║   ███████╗███████╗███████╗██║╚██████╔╝███████╗██║ ╚████║╚██████╗███████╗
+  ╚══════╝ ╚══▀▀═╝ ╚══════╝    ╚═╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝╚══════╝╚══════╝╚═╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝ ╚═════╝╚══════╝
 ```
 
 ### Ask your database anything. In plain English.
@@ -115,48 +116,48 @@
 
 ```
 ╔═══════════════════════════════════════════════════════════════════════════╗
-║                         BROWSER  (Next.js 14)                            ║
+║                         BROWSER  (Next.js 14)                             ║
 ║                                                                           ║
-║   ┌──────────┐  ┌───────────────────┐  ┌──────────────┐  ┌───────────┐  ║
-║   │ /connect │  │  /chat            │  │  /schema     │  │ /settings │  ║
-║   │ form +   │  │  messages ·       │  │  browser +   │  │ toggles + │  ║
-║   │ history  │  │  table · chart    │  │  explain·erd │  │ row limit │  ║
-║   └────┬─────┘  └──────┬────────────┘  └──────┬───────┘  └───────────┘  ║
-║        │               │                      │                          ║
-║   useSyncExternalStore─┴─── appStore ──────────┘                         ║
+║   ┌──────────┐  ┌───────────────────┐  ┌──────────────┐  ┌───────────┐    ║
+║   │ /connect │  │  /chat            │  │  /schema     │  │ /settings │    ║
+║   │ form +   │  │  messages ·       │  │  browser +   │  │ toggles + │    ║
+║   │ history  │  │  table · chart    │  │  explain·erd │  │ row limit │    ║
+║   └────┬─────┘  └──────┬────────────┘  └──────┬───────┘  └───────────┘    ║
+║        │               │                      │                           ║
+║   useSyncExternalStore─┴─── appStore ──────────┘                          ║
 ║                                    ↕  localStorage / sessionStorage       ║
-╚════════════════════════════════════╤═════════════════════════════════════╝
+╚════════════════════════════════════╤══════════════════════════════════════╝
                                      │  HTTP / JSON  (fetch)
 ╔════════════════════════════════════▼═════════════════════════════════════╗
 ║                       NESTJS 10  API SERVER  (port 3001)                 ║
-║                                                                           ║
+║                                                                          ║
 ║  ┌─────────────────────┐        ┌───────────────────────────────────┐    ║
 ║  │  ConnectionModule   │        │         QueryModule               │    ║
 ║  │  test · connect     │        │  ask() → validate → plan          │    ║
 ║  │  status · schema    │        │  execute() → revalidate → run     │    ║
 ║  │  disconnect         │        │  explainSchema() · history        │    ║
-║  └──────────┬──────────┘        └─────────────────┬─────────────────┘   ║
+║  └──────────┬──────────┘        └─────────────────┬─────────────────┘    ║
 ║             │                                     │                      ║
 ║             └──────────────────┬──────────────────┘                      ║
 ║                                │                                         ║
 ║  ┌─────────────────────────────▼──────────────────────────────────────┐  ║
-║  │                    ValidationService  (Global)                      │  ║
+║  │                    ValidationService  (Global)                     │  ║
 ║  │  node-sql-parser AST ──► 9 deterministic rules                     │  ║
-║  │  ① single-stmt  ② no-comments  ③ select-only  ④ no-union           │  ║
-║  │  ⑤ limit-req★   ⑥ subq-depth   ⑦ table-exists  ⑧ col-exists        │  ║
-║  │  ⑨ join-valid                  ★ auto-patches LIMIT 500            │  ║
+║  │  ① single-stmt  ② no-comments     select-only   no-union           │  ║
+║  │  ⑤ limit-req    ⑥ subq-depth      table-exists   col-exists        │  ║
+║  │  ⑨ join-valid                   auto-patches LIMIT 500             │  ║
 ║  └────────────────────────────────────────────────────────────────────┘  ║
-║                                                                           ║
+║                                                                          ║
 ║  ┌──────────────────┐   ┌────────────────┐   ┌─────────────────────────┐ ║
-║  │   LLMModule      │   │  MemoryModule  │   │   SchemaModule  (Global) │ ║
+║  │   LLMModule      │   │  MemoryModule  │   │   SchemaModule  (Global)│ ║
 ║  │  Cerebras AI     │   │  20-msg window │   │   SchemaGraph O(1) index│ ║
 ║  │  generateSQL     │   │  auto-compact  │   │   FK edge map · compress│ ║
 ║  │  interpretResults│   │  4000 tok limit│   │   → LLM token savings   │ ║
 ║  │  generateFreeText│   └────────────────┘   └─────────────────────────┘ ║
-║  └──────────────────┘                                                     ║
-║                                                                           ║
+║  └──────────────────┘                                                    ║
+║                                                                          ║
 ║  ┌────────────────────────────────────────────────────────────────────┐  ║
-║  │                  MCPService  (Global)  —  Execution Boundary        │  ║
+║  │                  MCPService  (Global)  —  Execution Boundary       │  ║
 ║  │  sessions Map · AES-256-CBC credentials · JSON-RPC 2.0 dispatch    │  ║
 ║  │  ┌──────────────┐   ┌──────────────────┐   ┌────────────────────┐  │  ║
 ║  │  │MySQLConnector│   │PostgresConnector │   │MongoDBConnector    │  │  ║
@@ -177,10 +178,10 @@
         │
         ▼
   ┌──────────────────┐   compressed   ┌──────────────────┐   JSON plan
-  │  PromptBuilder   │  schema string │  Cerebras LLM    │──────────────┐
-  │  memory window   │───────────────▶│  gpt-oss-120b    │              │
+  │  PromptBuilder   │  schema string │  Cerebras LLM    │───────────────┐
+  │  memory window   │──────────────▶│  gpt-oss-120b    │              n│
   │  schema context  │                │  temperature 0.1 │              ▼
-  └──────────────────┘                └──────────────────┘   ┌─────────────────────┐
+  └──────────────────┘                └──────────────────┘    ┌─────────────────────┐
                                                               │  ValidationService  │
                                                               │  9 AST rules        │
                                                               │  ACCEPT / REJECT    │
@@ -191,7 +192,7 @@
    │  ResultsTable  ←──────────── │              │  MCPService                 │
    │  ResultChart   ←── rows      │              │  decrypt AES-256 password   │
    │  MetadataStrip ←── time/conf │              │  mysql2 pool.query(sql)     │
-   │  AI Insight    ←── markdown  │◀─────────────│  → rows[]                   │
+   │  AI Insight    ←── markdown  │◀─────────────│  → rows[]                  │
    └──────────────────────────────┘  interpret   └─────────────────────────────┘
                                         ↑
                                   LLM.interpretResults()
