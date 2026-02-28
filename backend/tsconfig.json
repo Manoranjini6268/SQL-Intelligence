@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "target": "ES2021",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "strictBindCallApply": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "paths": {
+      "rxjs": ["node_modules/rxjs/dist/types/index.d.ts"],
+      "rxjs/*": ["node_modules/rxjs/dist/types/*"],
+      "@common/*": ["src/common/*"],
+      "@connection/*": ["src/connection/*"],
+      "@mcp/*": ["src/mcp/*"],
+      "@schema/*": ["src/schema/*"],
+      "@validation/*": ["src/validation/*"],
+      "@llm/*": ["src/llm/*"],
+      "@query/*": ["src/query/*"],
+      "@memory/*": ["src/memory/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
+}

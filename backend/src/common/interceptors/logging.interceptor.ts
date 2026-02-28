@@ -1,0 +1,36 @@
+// ──────────────────────────────────────────────
+// Logging Interceptor — Structured Request Logging
+// ──────────────────────────────────────────────
+
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  Logger,
+  NestInterceptor,
+} from '@nestjs/common';
+import { Observable, tap } from 'rxjs';
+
+@Injectable()
+export class LoggingInterceptor implements NestInterceptor {
+  private readonly logger = new Logger('HTTP');
+
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const request = context.switchToHttp().getRequest();
+    const { method, url } = request;
+    const startTime = Date.now();
+
+    return next.handle().pipe(
+      tap({
+        next: () => {
+          const duration = Date.now() - startTime;
+          this.logger.log(`${method} ${url} — ${duration}ms`);
+        },
+        error: (err: Error) => {
+          const duration = Date.now() - startTime;
+          this.logger.error(`${method} ${url} — ${duration}ms — ${err.message}`);
+        },
+      }),
+    );
+  }
+}
