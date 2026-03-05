@@ -100,6 +100,13 @@ export function updateLastMessage(update: Partial<ChatMessage>) {
   }
 }
 
+export function updateMessageById(id: string, update: Partial<ChatMessage>) {
+  const messages = state.messages.map((m) => (m.id === id ? { ...m, ...update } : m));
+  state = { ...state, messages };
+  saveMessages(state.messages);
+  notify();
+}
+
 export function subscribeToSession(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);

@@ -9,6 +9,15 @@ const nextConfig = {
       },
     ];
   },
+  webpack(config, { webpack }) {
+    // @xyflow/react requires __VERSION__ to be defined at build time
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        __VERSION__: JSON.stringify('12.10.1'),
+      }),
+    );
+    return config;
+  },
 };
 
 export default nextConfig;

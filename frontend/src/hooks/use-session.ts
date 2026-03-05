@@ -12,6 +12,7 @@ import {
   clearConnection,
   addMessage,
   updateLastMessage,
+  updateMessageById,
 } from '@/lib/store';
 import type { ConnectionResponse, ChatMessage } from '@/lib/types';
 
@@ -34,11 +35,16 @@ export function useSession() {
     updateLastMessage(update);
   }, []);
 
+  const patchMessageById = useCallback((id: string, update: Partial<ChatMessage>) => {
+    updateMessageById(id, update);
+  }, []);
+
   return {
     ...state,
     connect,
     disconnect,
     pushMessage,
     patchLastMessage,
+    patchMessageById,
   };
 }

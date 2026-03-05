@@ -2,7 +2,48 @@
 // Frontend Type Contracts
 // ──────────────────────────────────────────────
 
-export type ConnectorType = 'mysql' | 'postgres' | 'mongodb';
+export type ConnectorType = 'mysql' | 'postgres' | 'mongodb' | 'elasticsearch';
+
+/** Connector family — determines validation engine & prompt strategy */
+export type ConnectorFamily = 'sql' | 'elasticsearch' | 'document';
+
+/** Generative UI hint — which component the LLM recommends rendering */
+export type UIHint =
+  | 'metric_card'
+  | 'bar_chart'
+  | 'line_chart'
+  | 'pie_chart'
+  | 'area_chart'
+  | 'data_table'
+  | 'list'
+  | 'stat_grid'
+  | 'heatmap'
+  | 'donut_chart'
+  | 'stacked_bar'
+  | 'horizontal_bar'
+  | 'scatter_plot'
+  | 'radar_chart'
+  | 'gauge'
+  | 'number_trend'
+  | 'comparison_card'
+  | 'funnel_chart'
+  | 'timeline'
+  | 'treemap';
+
+/** Map a ConnectorType to its family */
+export function getConnectorFamily(type: ConnectorType): ConnectorFamily {
+  switch (type) {
+    case 'mysql':
+    case 'postgres':
+      return 'sql';
+    case 'elasticsearch':
+      return 'elasticsearch';
+    case 'mongodb':
+      return 'document';
+    default:
+      return 'sql';
+  }
+}
 
 export interface ConnectionParams {
   host: string;
@@ -43,9 +84,11 @@ export interface QueryPlanResult {
   explanation: string;
   tables_used: string[];
   confidence: number;
-  validationVerdict: 'ACCEPT' | 'REJECT';
+  validationVerdict: 'ACCEPT' | 'REJECT' | 'CONVERSATIONAL';
   validationReasons: string[];
   requiresApproval: boolean;
+  ui_hint?: UIHint;
+  follow_up_questions?: string[];
 }
 
 export interface QueryExecutionResult {
@@ -55,9 +98,12 @@ export interface QueryExecutionResult {
   confidence: number;
   executionTime: number;
   rowCount: number;
+  totalHits?: number;
   rows: Record<string, unknown>[];
   columns: string[];
   insight?: string;
+  ui_hint?: UIHint;
+  follow_up_questions?: string[];
 }
 
 export interface QueryAskResult {
@@ -78,6 +124,8 @@ export interface ChatMessage {
   plan?: QueryPlanResult;
   execution?: QueryExecutionResult;
   isStreaming?: boolean;
+  /** True when the plan is awaiting explicit user approval before execution */
+  pendingApproval?: boolean;
 }
 
 export interface StructuredError {
@@ -128,4 +176,20 @@ export interface SchemaTopology {
     totalColumns: number;
     totalRelationships: number;
   };
+}
+
+// ── Dashboard Types ────────────────────────
+
+export interface DashboardWidget {
+  id: string;
+  title: string;
+  prompt: string;
+  ui_hint: UIHint;
+  size: 'sm' | 'md' | 'lg';
+}
+
+export interface DashboardWidgetResult extends DashboardWidget {
+  loading: boolean;
+  error?: string;
+  execution?: QueryExecutionResult;
 }

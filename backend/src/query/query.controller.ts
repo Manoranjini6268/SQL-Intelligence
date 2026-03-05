@@ -15,7 +15,8 @@ import {
 } from '@nestjs/common';
 import { Response } from 'express';
 import { QueryService } from './query.service';
-import { AskDto, ExecuteQueryDto, GenerateQueryDto } from './dto/query.dto';
+import { AskDto, ExecuteQueryDto, ExplainSchemaDto, GenerateQueryDto, DashboardQueryDto, DashboardWidgetDto } from './dto/query.dto';
+import { ConnectorFamily } from '../common/types';
 
 @Controller('query')
 export class QueryController {
@@ -83,8 +84,12 @@ export class QueryController {
    */
   @Post('explain')
   @HttpCode(HttpStatus.OK)
-  async explainSchema(@Body() body: { schemaSummary: string; databaseName: string }) {
-    return this.queryService.explainSchema(body.schemaSummary, body.databaseName);
+  async explainSchema(@Body() dto: ExplainSchemaDto) {
+    return this.queryService.explainSchema(
+      dto.schemaSummary,
+      dto.databaseName,
+      dto.connectorFamily as ConnectorFamily | undefined,
+    );
   }
 
   /**
@@ -93,5 +98,25 @@ export class QueryController {
   @Get('history/:sessionId')
   getHistory(@Param('sessionId') sessionId: string) {
     return { queries: this.queryService.getQueryHistory(sessionId) };
+  }
+
+  /**
+   * Generate dashboard widget definitions for a connected datasource.
+   * Returns widget configs with prompts, ui_hints, and sizes.
+   */
+  @Post('dashboard/widgets')
+  @HttpCode(HttpStatus.OK)
+  async getDashboardWidgets(@Body() dto: DashboardQueryDto) {
+    return this.queryService.generateDashboardQueries(dto.sessionId);
+  }
+
+  /**
+   * Execute a single dashboard widget query.
+   * Takes a natural language prompt, generates plan, executes, returns results.
+   */
+  @Post('dashboard/execute')
+  @HttpCode(HttpStatus.OK)
+  async executeDashboardWidget(@Body() dto: DashboardWidgetDto) {
+    return this.queryService.executeDashboardWidget(dto.sessionId, dto.prompt);
   }
 }

@@ -7,6 +7,23 @@ export enum ConnectorType {
   MYSQL = 'mysql',
   POSTGRES = 'postgres',
   MONGODB = 'mongodb',
+  ELASTICSEARCH = 'elasticsearch',
+}
+
+/** Connector family — determines query language and validation path */
+export type ConnectorFamily = 'sql' | 'elasticsearch' | 'document';
+
+/** Map ConnectorType → ConnectorFamily */
+export function getConnectorFamily(type: ConnectorType): ConnectorFamily {
+  switch (type) {
+    case ConnectorType.MYSQL:
+    case ConnectorType.POSTGRES:
+      return 'sql';
+    case ConnectorType.ELASTICSEARCH:
+      return 'elasticsearch';
+    case ConnectorType.MONGODB:
+      return 'document';
+  }
 }
 
 /** Connection parameters collected from frontend */
@@ -163,4 +180,72 @@ export interface AuditLogEntry {
   rowCount?: number;
   schemaHash: string;
   connectorId: string;
+}
+
+// ── Elasticsearch-Specific Types ───────────────
+
+/** Elasticsearch field mapping types */
+export type ESFieldType =
+  | 'keyword'
+  | 'text'
+  | 'long'
+  | 'integer'
+  | 'short'
+  | 'byte'
+  | 'double'
+  | 'float'
+  | 'half_float'
+  | 'scaled_float'
+  | 'date'
+  | 'date_nanos'
+  | 'boolean'
+  | 'binary'
+  | 'integer_range'
+  | 'float_range'
+  | 'long_range'
+  | 'double_range'
+  | 'date_range'
+  | 'ip'
+  | 'completion'
+  | 'search_as_you_type'
+  | 'geo_point'
+  | 'geo_shape'
+  | 'ip_range'
+  | 'nested'
+  | 'object'
+  | 'flattened'
+  | 'alias'
+  | 'token_count'
+  | 'histogram'
+  | 'constant_keyword'
+  | 'wildcard'
+  | 'unsigned_long'
+  | 'version'
+  | string; // fallback for unknown types
+
+/** Parsed ES field mapping */
+export interface ESFieldMapping {
+  name: string;
+  type: ESFieldType;
+  fields?: Record<string, { type: ESFieldType }>; // multi-fields (e.g. text + keyword)
+  properties?: Record<string, ESFieldMapping>; // nested/object sub-fields
+  isNested: boolean;
+  path: string; // dot-separated path from root
+}
+
+/** ES index mapping */
+export interface ESIndexMapping {
+  indexName: string;
+  fields: ESFieldMapping[];
+  flatFieldPaths: string[]; // all dot-path field names for validation
+  timeField?: string; // inferred @timestamp or date field
+  totalFields: number;
+}
+
+/** ES validation result for DSL queries */
+export interface ESValidationResult {
+  verdict: 'ACCEPT' | 'REJECT';
+  queryDsl: string;
+  reasons: string[];
+  rulesChecked: string[];
 }

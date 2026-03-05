@@ -9,6 +9,7 @@ import { ValidationRule, FullValidationResult } from './types';
 import {
   SelectOnlyRule,
   SingleStatementRule,
+  NoPlaceholdersRule,
   LimitRequiredRule,
   NoCommentsRule,
   NoUnionRule,
@@ -31,6 +32,7 @@ export class ValidationService {
     this.rules = [
       new SingleStatementRule(),
       new NoCommentsRule(),
+      new NoPlaceholdersRule(),
       new SelectOnlyRule(),
       new NoUnionRule(),
       new LimitRequiredRule(),

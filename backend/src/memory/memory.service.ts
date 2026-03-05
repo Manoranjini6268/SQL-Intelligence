@@ -119,6 +119,47 @@ export class MemoryService {
     state.connectorId = connectorId;
   }
 
+  /**
+   * Append a compact result preview to the last assistant message in memory.
+   * Called after every query execution so the LLM can reference actual values
+   * (emails, IDs, names, amounts) verbatim in follow-up queries, instead of
+   * generating placeholder text.
+   */
+  appendResultSummary(
+    sessionId: string,
+    rows: Record<string, unknown>[],
+    columns: string[],
+  ): void {
+    const state = this.sessions.get(sessionId);
+    if (!state || state.messages.length === 0 || rows.length === 0 || columns.length === 0) return;
+
+    const MAX_ROWS = 10;
+    const MAX_COLS = 8;
+    const topRows = rows.slice(0, MAX_ROWS);
+    const topCols = columns.slice(0, MAX_COLS);
+
+    const header = topCols.join(' | ');
+    const dataRows = topRows
+      .map((row) => topCols.map((col) => String(row[col] ?? '')).join(' | '))
+      .join('\n');
+
+    const label =
+      rows.length > MAX_ROWS
+        ? `RESULT PREVIEW (showing ${MAX_ROWS} of ${rows.length} rows)`
+        : `RESULT PREVIEW (${rows.length} rows)`;
+
+    // Append to the last assistant message so the next context window includes it
+    for (let i = state.messages.length - 1; i >= 0; i--) {
+      if (state.messages[i].role === 'assistant') {
+        state.messages[i].content += `\n\n${label}:\n${header}\n${dataRows}`;
+        this.logger.log(
+          `Result summary appended to session ${sessionId} (${topRows.length} preview rows, ${topCols.length} cols)`,
+        );
+        return;
+      }
+    }
+  }
+
   /** Add a derived metric definition */
   addDerivedMetric(sessionId: string, name: string, definition: string): void {
     const state = this.getOrCreateSession(sessionId);

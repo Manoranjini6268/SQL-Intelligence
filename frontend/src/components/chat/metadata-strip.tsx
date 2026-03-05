@@ -26,6 +26,9 @@ export function MetadataStrip({ execution }: MetadataStripProps) {
       <div className="flex items-center gap-1">
         <Rows3 className="h-3.5 w-3.5" />
         <span>{execution.rowCount} rows</span>
+        {execution.totalHits !== undefined && execution.totalHits > execution.rowCount && (
+          <span className="text-zinc-500">of {execution.totalHits.toLocaleString()} matching</span>
+        )}
       </div>
 
       {execution.tables_used.length > 0 && (

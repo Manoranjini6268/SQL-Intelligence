@@ -1,15 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SQLBlockProps {
   sql: string;
+  /** Override the block label; auto-detected if omitted */
+  label?: string;
 }
 
-export function SQLBlock({ sql }: SQLBlockProps) {
+/**
+ * QueryBlock — renders validated SQL *or* ES DSL with syntax highlighting.
+ * Auto-detects JSON (ES DSL) vs SQL based on content.
+ */
+export function SQLBlock({ sql, label }: SQLBlockProps) {
   const [copied, setCopied] = useState(false);
+
+  const isJSON = useMemo(() => {
+    const trimmed = sql.trim();
+    return trimmed.startsWith('{') || trimmed.startsWith('[');
+  }, [sql]);
+
+  const displayLabel = label ?? (isJSON ? 'Elasticsearch DSL' : 'Validated SQL');
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(sql);
@@ -17,13 +30,24 @@ export function SQLBlock({ sql }: SQLBlockProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Basic SQL syntax highlighting
-  const highlighted = highlightSQL(sql);
+  // Pretty-print JSON for ES DSL, or highlight SQL
+  const highlighted = useMemo(() => {
+    if (isJSON) {
+      try {
+        const parsed = JSON.parse(sql);
+        const pretty = JSON.stringify(parsed, null, 2);
+        return highlightJSON(pretty);
+      } catch {
+        return highlightJSON(sql);
+      }
+    }
+    return highlightSQL(sql);
+  }, [sql, isJSON]);
 
   return (
     <div className="group relative rounded-lg border bg-muted/50">
       <div className="flex items-center justify-between border-b px-4 py-2">
-        <span className="text-xs font-medium text-muted-foreground">Validated SQL</span>
+        <span className="text-xs font-medium text-muted-foreground">{displayLabel}</span>
         <Button
           variant="ghost"
           size="sm"
@@ -42,6 +66,40 @@ export function SQLBlock({ sql }: SQLBlockProps) {
       </pre>
     </div>
   );
+}
+
+/** JSON syntax highlighting for ES DSL */
+function highlightJSON(json: string): string {
+  let result = json
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Highlight property keys: "key":
+  result = result.replace(
+    /("(?:[^"\\]|\\.)*")\s*:/g,
+    '<span class="text-blue-400">$1</span>:',
+  );
+
+  // Highlight string values (not keys)
+  result = result.replace(
+    /:\s*("(?:[^"\\]|\\.)*")/g,
+    (match, str) => match.replace(str, `<span class="text-emerald-400">${str}</span>`),
+  );
+
+  // Highlight numbers
+  result = result.replace(
+    /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g,
+    (match, num) => match.replace(num, `<span class="text-amber-400">${num}</span>`),
+  );
+
+  // Highlight booleans and null
+  result = result.replace(
+    /:\s*(true|false|null)\b/g,
+    (match, val) => match.replace(val, `<span class="text-purple-400">${val}</span>`),
+  );
+
+  return result;
 }
 
 function highlightSQL(sql: string): string {

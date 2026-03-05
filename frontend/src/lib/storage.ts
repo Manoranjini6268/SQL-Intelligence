@@ -12,6 +12,7 @@ const SETTINGS_KEY = 'sqli_settings';
 export interface PersistedSettings {
   showSQL: boolean;
   rowLimit?: number;
+  dashboardEnabled?: boolean;
 }
 
 // ── Connection Persistence ──────────────────
@@ -37,19 +38,31 @@ export function clearPersistedConnection(): void {
 }
 
 // ── Credential Persistence ──────────────────
-// Stored locally for session restore after tab/browser refresh.
-// This is a dev tool — credentials are plain-text localhost credentials.
+// Stored in sessionStorage (cleared on browser close) with password EXCLUDED.
+// Only non-sensitive connection metadata is persisted for session restore.
 
 export function saveParams(params: ConnectionParams): void {
   if (typeof window === 'undefined') return;
-  try { localStorage.setItem(PARAMS_KEY, JSON.stringify(params)); } catch { /* noop */ }
+  try {
+    // Strip password — never persist credentials to any storage
+    const { password: _pw, ...safe } = params;
+    sessionStorage.setItem(PARAMS_KEY, JSON.stringify(safe));
+  } catch { /* noop */ }
 }
 
 export function loadParams(): ConnectionParams | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(PARAMS_KEY);
-    return raw ? (JSON.parse(raw) as ConnectionParams) : null;
+    // Try sessionStorage first (new behaviour), fall back to localStorage for migration
+    let raw = sessionStorage.getItem(PARAMS_KEY);
+    if (!raw) {
+      raw = localStorage.getItem(PARAMS_KEY);
+      if (raw) localStorage.removeItem(PARAMS_KEY); // one-time migration cleanup
+    }
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<ConnectionParams>;
+    // Password is intentionally absent — caller must prompt user
+    return { ...parsed, password: '' } as ConnectionParams;
   } catch { return null; }
 }
 
@@ -81,11 +94,11 @@ export function saveSettings(settings: PersistedSettings): void {
 }
 
 export function loadSettings(): PersistedSettings {
-  if (typeof window === 'undefined') return { showSQL: true };
+  if (typeof window === 'undefined') return { showSQL: true, dashboardEnabled: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { showSQL: true, ...JSON.parse(raw) } : { showSQL: true };
-  } catch { return { showSQL: true }; }
+    return raw ? { showSQL: true, dashboardEnabled: true, ...JSON.parse(raw) } : { showSQL: true, dashboardEnabled: true };
+  } catch { return { showSQL: true, dashboardEnabled: true }; }
 }
 
 // ── Connection History ──────────────────────

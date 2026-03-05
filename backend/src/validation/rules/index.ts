@@ -4,6 +4,7 @@
 
 export { SelectOnlyRule } from './select-only.rule';
 export { SingleStatementRule } from './single-statement.rule';
+export { NoPlaceholdersRule } from './no-placeholders.rule';
 export { LimitRequiredRule } from './limit-required.rule';
 export { NoCommentsRule } from './no-comments.rule';
 export { NoUnionRule } from './no-union.rule';

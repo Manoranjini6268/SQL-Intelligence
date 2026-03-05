@@ -41,3 +41,33 @@ export class AskDto {
   @IsNotEmpty()
   prompt!: string;
 }
+
+export class ExplainSchemaDto {
+  @IsString()
+  @IsNotEmpty()
+  schemaSummary!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  databaseName!: string;
+
+  @IsOptional()
+  @IsString()
+  connectorFamily?: string;
+}
+
+export class DashboardQueryDto {
+  @IsString()
+  @IsNotEmpty()
+  sessionId!: string;
+}
+
+export class DashboardWidgetDto {
+  @IsString()
+  @IsNotEmpty()
+  sessionId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  prompt!: string;
+}

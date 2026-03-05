@@ -69,5 +69,10 @@ backend/dist/
 # Ignore local creds used by MCP (if any)
 secret-*.json
 
+# Scratch / one-off scripts and test output artifacts
+*.scratch.*
+*_result.json
+query_*.js
+
 # Ignore node build artifacts
 npm-debug.log*

@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────
 
 import { plainToInstance } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional, IsString, Min, validateSync } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Min, validateSync } from 'class-validator';
 
 export enum Environment {
   Development = 'development',
@@ -20,6 +20,7 @@ export class EnvironmentVariables {
   PORT: number = 3001;
 
   @IsString()
+  @IsNotEmpty({ message: 'CEREBRAS_API_KEY must not be empty' })
   CEREBRAS_API_KEY!: string;
 
   @IsString()

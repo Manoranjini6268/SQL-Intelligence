@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+import { CopilotProvider } from '@/components/copilot-provider';
 
 export const metadata: Metadata = {
   title: 'SQL Intelligence Platform',
@@ -16,11 +14,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <div className="min-h-screen bg-background">
-          {children}
-        </div>
+      <body className="font-sans antialiased">
+        <CopilotProvider>
+          <div className="min-h-screen bg-background">
+            {children}
+          </div>
+        </CopilotProvider>
       </body>
     </html>
   );
 }
+

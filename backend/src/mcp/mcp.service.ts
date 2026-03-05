@@ -25,6 +25,7 @@ import {
 import { MySQLConnector } from './connectors/mysql.connector';
 import { PostgresConnector } from './connectors/postgres.connector';
 import { MongoDBConnector } from './connectors/mongo.connector';
+import { ElasticsearchConnector } from './connectors/elasticsearch.connector';
 
 @Injectable()
 export class MCPService implements OnModuleDestroy {
@@ -61,6 +62,7 @@ export class MCPService implements OnModuleDestroy {
       [ConnectorType.MYSQL, new MySQLConnector()],
       [ConnectorType.POSTGRES, new PostgresConnector()],
       [ConnectorType.MONGODB, new MongoDBConnector()],
+      [ConnectorType.ELASTICSEARCH, new ElasticsearchConnector()],
     ]);
 
     this.logger.log(
@@ -249,7 +251,7 @@ export class MCPService implements OnModuleDestroy {
         inputSchema: {
           type: 'object',
           properties: {
-            connectorType: { type: 'string', enum: ['mysql', 'postgres', 'mongodb'] },
+            connectorType: { type: 'string', enum: ['mysql', 'postgres', 'mongodb', 'elasticsearch'] },
             host: { type: 'string' },
             port: { type: 'number' },
             username: { type: 'string' },
@@ -272,7 +274,7 @@ export class MCPService implements OnModuleDestroy {
       },
       {
         name: 'executeReadQuery',
-        description: 'Execute a validated, read-only SQL query against the connected database.',
+        description: 'Execute a validated, read-only query against the connected data source (SQL or ES DSL).',
         inputSchema: {
           type: 'object',
           properties: {

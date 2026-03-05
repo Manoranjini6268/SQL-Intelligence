@@ -10,6 +10,7 @@ import type {
   QueryAskResult,
   StreamEvent,
   StructuredError,
+  DashboardWidget,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -94,11 +95,12 @@ export async function executeQuery(
   sessionId: string,
   sql: string,
   prompt?: string,
+  approved: boolean = true,
 ): Promise<QueryExecutionResult> {
   const response = await fetch(`${API_BASE}/query/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sessionId, sql, approved: true, prompt }),
+    body: JSON.stringify({ sessionId, sql, approved, prompt }),
   });
   return handleResponse(response);
 }
@@ -174,11 +176,37 @@ export async function getSchema(
 export async function explainSchema(
   schemaSummary: string,
   databaseName: string,
+  connectorFamily?: string,
 ): Promise<{ explanation: string }> {
   const response = await fetch(`${API_BASE}/query/explain`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ schemaSummary, databaseName }),
+    body: JSON.stringify({ schemaSummary, databaseName, connectorFamily }),
+  });
+  return handleResponse(response);
+}
+
+// ── Dashboard API ──────────────────────────
+
+export async function getDashboardWidgets(
+  sessionId: string,
+): Promise<{ widgets: DashboardWidget[] }> {
+  const response = await fetch(`${API_BASE}/query/dashboard/widgets`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  });
+  return handleResponse(response);
+}
+
+export async function executeDashboardWidget(
+  sessionId: string,
+  prompt: string,
+): Promise<QueryExecutionResult> {
+  const response = await fetch(`${API_BASE}/query/dashboard/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, prompt }),
   });
   return handleResponse(response);
 }

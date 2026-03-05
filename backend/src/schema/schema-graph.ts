@@ -188,7 +188,12 @@ export class SchemaGraph {
   compressSchemaForLLM(): CompressedSchema {
     const tables = Array.from(this.tables.values()).map((t) => ({
       name: t.name,
-      columns: t.columns.map((c) => `${c.name}:${c.type}${c.isPrimaryKey ? '(PK)' : ''}${!c.nullable ? '(NOT NULL)' : ''}`).join(', '),
+      columns: t.columns
+        .map((c) => {
+          const nestedMarker = c.comment === 'nested object' ? '[nested]' : '';
+          return `${c.name}:${c.type}${nestedMarker}${c.isPrimaryKey ? '(PK)' : ''}${!c.nullable ? '(NOT NULL)' : ''}`;
+        })
+        .join(', '),
       primaryKeys: t.primaryKeys,
     }));
 

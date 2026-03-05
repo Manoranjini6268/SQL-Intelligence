@@ -13,8 +13,12 @@ import { StrictValidationPipe } from './common/pipes/validation.pipe';
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
 
+  const isDev = process.env.NODE_ENV !== 'production';
+
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    logger: isDev
+      ? ['error', 'warn', 'log', 'debug', 'verbose']
+      : ['error', 'warn', 'log'],
   });
 
   // Security headers
@@ -24,7 +28,7 @@ async function bootstrap() {
   app.enableCors({
     origin: [
       'http://localhost:3000',
-      'http://localhost:3001',
+      ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Id'],

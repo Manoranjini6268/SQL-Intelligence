@@ -89,6 +89,8 @@ export interface MCPQueryResult {
   columns: string[];
   rowCount: number;
   executionTimeMs: number;
+  /** Total matching documents in ES (may exceed returned rows when size < total) */
+  totalHits?: number;
 }
 
 /** Base connector interface — every MCP connector must implement this */

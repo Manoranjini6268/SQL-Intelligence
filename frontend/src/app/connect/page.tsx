@@ -38,12 +38,21 @@ const CONNECTOR_OPTIONS: { value: ConnectorType; label: string; icon: string }[]
   { value: 'mysql', label: 'MySQL', icon: '🐬' },
   { value: 'postgres', label: 'PostgreSQL', icon: '🐘' },
   { value: 'mongodb', label: 'MongoDB', icon: '🍃' },
+  { value: 'elasticsearch', label: 'Elasticsearch', icon: '🔍' },
 ];
 
 const DEFAULT_PORTS: Record<ConnectorType, number> = {
   mysql: 3306,
   postgres: 5432,
   mongodb: 27017,
+  elasticsearch: 9200,
+};
+
+const CONNECTOR_ICONS: Record<ConnectorType, string> = {
+  mysql: '🐬',
+  postgres: '🐘',
+  mongodb: '🍃',
+  elasticsearch: '🔍',
 };
 
 export default function ConnectPage() {
@@ -127,18 +136,20 @@ export default function ConnectPage() {
           >
             <Zap className="h-8 w-8 text-primary" />
           </motion.div>
-          <h1 className="text-3xl font-bold tracking-tight">SQL Intelligence</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Data Intelligence</h1>
           <p className="mt-2 text-muted-foreground">
-            Connect to your database to start querying with natural language
+            Connect to your database or cluster to start querying with natural language
           </p>
         </div>
 
         {/* Connection Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Database Connection</CardTitle>
+            <CardTitle className="text-lg">
+              {connectorType === 'elasticsearch' ? 'Elasticsearch Connection' : 'Database Connection'}
+            </CardTitle>
             <CardDescription>
-              All connections are read-only. Credentials are never persisted.
+              All connections are read-only. Passwords are never stored.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -219,18 +230,27 @@ export default function ConnectPage() {
               />
             </div>
 
-            {/* Database */}
+            {/* Database / Index Pattern */}
             <div className="space-y-2">
               <Label htmlFor="database">
                 <Database className="mr-1 inline h-3.5 w-3.5" />
-                Database
+                {connectorType === 'elasticsearch' ? 'Index Pattern' : 'Database'}
               </Label>
               <Input
                 id="database"
                 value={database}
                 onChange={(e) => setDatabase(e.target.value)}
-                placeholder="Enter database name"
+                placeholder={
+                  connectorType === 'elasticsearch'
+                    ? 'e.g. logs-* or my-index'
+                    : 'Enter database name'
+                }
               />
+              {connectorType === 'elasticsearch' && (
+                <p className="text-xs text-muted-foreground">
+                  Use * to discover all indices, or specify a pattern like logs-*
+                </p>
+              )}
             </div>
 
             {/* Status Messages */}
@@ -295,7 +315,7 @@ export default function ConnectPage() {
                 Read-Only
               </Badge>
               <Badge variant="outline" className="text-xs">
-                Session Persisted Locally
+                Password Not Stored
               </Badge>
               <Badge variant="outline" className="text-xs">
                 MCP Isolated
@@ -333,7 +353,7 @@ export default function ConnectPage() {
                   className="flex w-full items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent hover:border-accent"
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-base">
-                    {entry.connectorType === 'mysql' ? '🐬' : entry.connectorType === 'postgres' ? '🐘' : '🍃'}
+                    {CONNECTOR_ICONS[entry.connectorType as ConnectorType] ?? '💾'}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-foreground">{entry.database}</p>

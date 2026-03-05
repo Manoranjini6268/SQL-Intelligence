@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Code2, Database, RefreshCw, Keyboard, BarChart2, Layers } from 'lucide-react';
+import { ArrowLeft, Code2, Database, RefreshCw, Keyboard, BarChart2, Layers, LayoutDashboard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { loadSettings, saveSettings, clearPersistedConnection } from '@/lib/storage';
 import type { PersistedSettings } from '@/lib/storage';
@@ -21,17 +21,19 @@ export default function SettingsPage() {
   const router = useRouter();
   const [showSQL, setShowSQL] = useState(true);
   const [rowLimit, setRowLimit] = useState<RowLimit>(500);
+  const [dashboardEnabled, setDashboardEnabled] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const s = loadSettings();
     setShowSQL(s.showSQL);
     setRowLimit((s.rowLimit as RowLimit) ?? 500);
+    setDashboardEnabled(s.dashboardEnabled !== false);
     setLoaded(true);
   }, []);
 
   const save = (patch: Partial<PersistedSettings>) => {
-    const next: PersistedSettings = { showSQL, rowLimit, ...patch };
+    const next: PersistedSettings = { showSQL, rowLimit, dashboardEnabled, ...patch };
     saveSettings(next);
   };
 
@@ -44,6 +46,12 @@ export default function SettingsPage() {
   const handleRowLimit = (v: RowLimit) => {
     setRowLimit(v);
     save({ rowLimit: v });
+  };
+
+  const handleToggleDashboard = () => {
+    const next = !dashboardEnabled;
+    setDashboardEnabled(next);
+    save({ dashboardEnabled: next });
   };
 
   const handleClearSession = () => {
@@ -86,10 +94,26 @@ export default function SettingsPage() {
             <div className="overflow-hidden rounded-xl border bg-card">
               <SettingRow
                 icon={<Code2 className="h-4 w-4 text-primary" />}
-                title="Show SQL Query"
-                description="Display the generated SQL alongside results"
+                title="Show Generated Query"
+                description="Display the generated SQL or ES DSL alongside results"
                 checked={showSQL}
                 onToggle={handleToggleSQL}
+              />
+            </div>
+          </section>
+
+          {/* Dashboard */}
+          <section>
+            <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Dashboard
+            </h2>
+            <div className="overflow-hidden rounded-xl border bg-card">
+              <SettingRow
+                icon={<LayoutDashboard className="h-4 w-4 text-primary" />}
+                title="Enable Dashboard"
+                description="Show the dashboard page for drag-and-drop analytics widgets"
+                checked={dashboardEnabled}
+                onToggle={handleToggleDashboard}
               />
             </div>
           </section>
@@ -199,7 +223,7 @@ export default function SettingsPage() {
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
                   <Layers className="h-3.5 w-3.5 text-primary" />
                 </div>
-                <span className="text-sm font-semibold">SQL Intelligence Platform</span>
+                <span className="text-sm font-semibold">Data Intelligence Platform</span>
                 <span className="ml-auto rounded-full border px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
                   v1.0 MVP
                 </span>

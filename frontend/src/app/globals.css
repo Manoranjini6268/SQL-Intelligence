@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* System font stack — avoids build-time Google Fonts fetch in Docker */
+:root {
+  --font-inter: Inter, 'Helvetica Neue', Arial, sans-serif;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -92,4 +97,26 @@
   content: '▊';
   animation: typing-cursor 1s step-end infinite;
   @apply text-primary ml-0.5;
+}
+
+/* Dashboard grid layout transitions */
+.react-grid-item {
+  transition: all 200ms ease;
+}
+.react-grid-item.cssTransforms {
+  transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+}
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+}
+.react-grid-item.resizing {
+  transition: none;
+}
+.react-grid-placeholder {
+  background: rgba(16, 185, 129, 0.08) !important;
+  border: 2px dashed rgba(16, 185, 129, 0.3) !important;
+  border-radius: 1rem;
+  opacity: 1 !important;
 }

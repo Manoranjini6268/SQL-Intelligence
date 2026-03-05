@@ -8,7 +8,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSchema, executeQuery, explainSchema } from '@/lib/api';
 import { loadConnection } from '@/lib/storage';
-import type { SchemaTopology, SchemaTable, QueryExecutionResult } from '@/lib/types';
+import type { SchemaTopology, SchemaTable, QueryExecutionResult, ConnectorType } from '@/lib/types';
+import { getConnectorFamily } from '@/lib/types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import {
@@ -275,6 +276,7 @@ export default function SchemaPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [connectorType, setConnectorType] = useState<ConnectorType>('mysql');
   const [preview, setPreview] = useState<QueryExecutionResult | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [erdCopied, setErdCopied] = useState(false);
@@ -282,13 +284,18 @@ export default function SchemaPage() {
   const [explainLoading, setExplainLoading] = useState(false);
   const [showExplain, setShowExplain] = useState(false);
 
+  const connectorFamily = getConnectorFamily(connectorType);
+  const isES = connectorFamily === 'elasticsearch';
+  const entityLabel = isES ? 'index' : 'table';
+  const entityLabelPlural = isES ? 'indices' : 'tables';
+
   const handleExplainDB = async () => {
     if (!topology) return;
     setShowExplain(true);
     setExplainLoading(true);
     setExplainText(null);
     try {
-      // Build a concise schema summary from the already-loaded topology — no SQL needed
+      // Build a concise schema summary from the already-loaded topology
       const lines: string[] = [];
       topology.tables.forEach((t) => {
         const pks = t.primaryKeys.join(', ');
@@ -296,13 +303,13 @@ export default function SchemaPage() {
           .map((fk) => `${fk.columnName} → ${fk.referencedTable}.${fk.referencedColumn}`)
           .join(', ');
         const cols = t.columns.map((c) => `${c.name} (${c.type}${c.isPrimaryKey ? ', PK' : ''}${c.isForeignKey ? ', FK' : ''})`).join(', ');
-        lines.push(`Table: ${t.name}`);
-        lines.push(`  Columns: ${cols}`);
+        lines.push(`${isES ? 'Index' : 'Table'}: ${t.name}`);
+        lines.push(`  ${isES ? 'Mappings' : 'Columns'}: ${cols}`);
         if (pks) lines.push(`  Primary keys: ${pks}`);
         if (fks) lines.push(`  Foreign keys: ${fks}`);
       });
       const summary = lines.join('\n');
-      const result = await explainSchema(summary, topology.database);
+      const result = await explainSchema(summary, topology.database, connectorFamily);
       setExplainText(result.explanation);
     } catch {
       setExplainText('Unable to fetch AI explanation. Please try again.');
@@ -336,6 +343,7 @@ export default function SchemaPage() {
       return;
     }
     setSessionId(conn.sessionId);
+    if (conn.connectorType) setConnectorType(conn.connectorType as ConnectorType);
   }, [router]);
 
   // Fetch schema once sessionId is set
@@ -378,10 +386,10 @@ export default function SchemaPage() {
     setPreviewLoading(true);
     setPreview(null);
     try {
-      const result = await executeQuery(
-        sessionId,
-        `SELECT * FROM \`${selectedTable.name}\` LIMIT 10`,
-      );
+      const query = isES
+        ? JSON.stringify({ _index: selectedTable.name, query: { match_all: {} }, size: 10 })
+        : `SELECT * FROM \`${selectedTable.name}\` LIMIT 10`;
+      const result = await executeQuery(sessionId, query);
       setPreview(result);
     } catch {
       // silently ignore — user sees nothing loaded
@@ -394,7 +402,9 @@ export default function SchemaPage() {
     if (!selectedTable) return;
     sessionStorage.setItem(
       'sqli_prefill',
-      `Show me interesting insights about the ${selectedTable.name} table`,
+      isES
+        ? `Show me interesting insights about the ${selectedTable.name} index`
+        : `Show me interesting insights about the ${selectedTable.name} table`,
     );
     router.push('/chat');
   };
@@ -458,28 +468,32 @@ export default function SchemaPage() {
             className="inline-flex items-center gap-1.5 rounded-md border border-violet-600/40 bg-violet-600/10 hover:bg-violet-600/20 px-2.5 py-1.5 text-xs font-medium text-violet-300 transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            Explain DB
+            {isES ? 'Explain Cluster' : 'Explain DB'}
           </button>
-          <button
-            onClick={() => router.push('/schema/erd')}
-            className="inline-flex items-center gap-1.5 rounded-md border border-indigo-600/40 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1.5 text-xs font-medium text-indigo-300 transition-colors"
-          >
-            <Network className="h-3.5 w-3.5" />
-            View ERD
-          </button>
-          <button
-            onClick={handleCopyERD}
-            className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700/50 bg-zinc-800/60 hover:bg-zinc-700/60 px-2.5 py-1.5 text-xs font-medium text-zinc-300 transition-colors"
-          >
-            {erdCopied ? (
-              <><Check className="h-3.5 w-3.5 text-emerald-400" /> Copied!</>
-            ) : (
-              <><GitFork className="h-3.5 w-3.5" /> Copy ERD</>
-            )}
-          </button>
-          <Badge variant="stat">{topology.stats.totalTables} tables</Badge>
-          <Badge variant="stat">{topology.stats.totalColumns} columns</Badge>
-          <Badge variant="stat">{topology.stats.totalRelationships} relationships</Badge>
+          {!isES && (
+            <>
+              <button
+                onClick={() => router.push('/schema/erd')}
+                className="inline-flex items-center gap-1.5 rounded-md border border-indigo-600/40 bg-indigo-600/10 hover:bg-indigo-600/20 px-2.5 py-1.5 text-xs font-medium text-indigo-300 transition-colors"
+              >
+                <Network className="h-3.5 w-3.5" />
+                View ERD
+              </button>
+              <button
+                onClick={handleCopyERD}
+                className="inline-flex items-center gap-1.5 rounded-md border border-zinc-700/50 bg-zinc-800/60 hover:bg-zinc-700/60 px-2.5 py-1.5 text-xs font-medium text-zinc-300 transition-colors"
+              >
+                {erdCopied ? (
+                  <><Check className="h-3.5 w-3.5 text-emerald-400" /> Copied!</>
+                ) : (
+                  <><GitFork className="h-3.5 w-3.5" /> Copy ERD</>
+                )}
+              </button>
+            </>
+          )}
+          <Badge variant="stat">{topology.stats.totalTables} {entityLabelPlural}</Badge>
+          <Badge variant="stat">{topology.stats.totalColumns} {isES ? 'fields' : 'columns'}</Badge>
+          {!isES && <Badge variant="stat">{topology.stats.totalRelationships} relationships</Badge>}
         </div>
       </header>
 
@@ -524,7 +538,7 @@ export default function SchemaPage() {
               </button>
             ))}
             {filteredTables.length === 0 && (
-              <p className="px-4 py-6 text-center text-xs text-zinc-600">No tables match</p>
+              <p className="px-4 py-6 text-center text-xs text-zinc-600">No {entityLabelPlural} match</p>
             )}
           </div>
         </aside>
@@ -541,7 +555,7 @@ export default function SchemaPage() {
             />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-zinc-600">Select a table to explore</p>
+              <p className="text-sm text-zinc-600">Select {isES ? 'an index' : 'a table'} to explore</p>
             </div>
           )}
         </main>
@@ -561,7 +575,7 @@ export default function SchemaPage() {
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600/20">
                 <Sparkles className="h-3.5 w-3.5 text-violet-400" />
               </div>
-              <h2 className="font-semibold text-white">AI Database Summary</h2>
+              <h2 className="font-semibold text-white">{isES ? 'AI Cluster Summary' : 'AI Database Summary'}</h2>
               <button
                 onClick={() => setShowExplain(false)}
                 className="ml-auto rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
