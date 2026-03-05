@@ -1,4 +1,4 @@
-<h1 align="center">SQL Intelligence</h1>
+<h1 align="center">DataIntel</h1>
 <p align="center">
   Ask your database in plain English.
 </p>
@@ -12,8 +12,8 @@
 
 <br/>
 
-> **MySQL Intelligence** is a production-grade, read-only SQL assistant.  
-> Type a question in plain English. Get validated SQL, executed results, interactive charts, and an AI-generated insight — all in seconds.
+> **DataIntel** is a production-grade, read-only natural-language query interface.  
+> Connect to MySQL, PostgreSQL, MongoDB, or Elasticsearch. Type a question. Get a validated query, executed results, and an AI-explained chart — all in seconds.
 
 <br/>
 
@@ -30,7 +30,7 @@
 <td width="50%" valign="top">
 
 ### 🧠 AI-Powered Queries
-- Natural language → validated SQL via **Cerebras gpt-oss-120b**
+- Natural language → validated query via **Cerebras gpt-oss-120b**
 - Schema-aware prompts (compressed to ~400 tokens)
 - Confidence scoring on every generated query
 - AI-written result insights in **markdown**
@@ -160,9 +160,9 @@
   You: "Top 5 customers by total order value this year?"
         │
         ▼
-  ┌──────────────────┐   compressed   ┌──────────────────┐   JSON plan
-  │  PromptBuilder   │  schema string │  Cerebras LLM    │───────────────┐
-  │  memory window   │──────────────▶│  gpt-oss-120b    │              n│
+  ┌────────────────────┐   compressed   ┌──────────────────┐   JSON plan
+  │  PromptBuilder   │  schema string │  Cerebras LLM    │───────────────│
+  │  memory window   │────────────────▶│  llama-4-scout   │              n│
   │  schema context  │                │  temperature 0.1 │              ▼
   └──────────────────┘                └──────────────────┘    ┌─────────────────────┐
                                                               │  ValidationService  │
@@ -188,18 +188,18 @@
 
 ### Prerequisites
 
-| Requirement | Version |
-|---|---|
-| **Node.js** | 18 or higher |
-| **npm** | 9 or higher |
-| **MySQL** | Any accessible instance |
-| **Cerebras API Key** | [platform.cerebras.ai](https://platform.cerebras.ai) |
+| Requirement | Version | Notes |
+|---|---|---|
+| **Node.js** | 18 or higher | — |
+| **npm** | 9 or higher | — |
+| **Database** | any | MySQL, PostgreSQL, MongoDB, or Elasticsearch |
+| **Cerebras API Key** | — | [platform.cerebras.ai](https://platform.cerebras.ai) |
 
 ### 1 — Clone & Install
 
 ```bash
 git clone <repo-url>
-cd MySQL_Intelligence
+cd DataIntel
 
 # Backend
 cd backend && npm install
@@ -218,12 +218,12 @@ CEREBRAS_API_KEY=csk-xxxxxxxxxxxxxxxxxxxx
 
 # ── Optional (defaults shown) ─────────────────────────────────
 PORT=3001
-CEREBRAS_API_URL=https://api.cerebras.ai/v1
-CEREBRAS_MODEL=gpt-oss-120b
-MCP_EXECUTION_TIMEOUT_MS=30000
-MCP_MAX_RESULT_ROWS=500
-MEMORY_SLIDING_WINDOW_SIZE=20
-MEMORY_SUMMARY_TOKEN_THRESHOLD=4000
+```
+
+Create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
 ### 3 — Run
@@ -240,7 +240,9 @@ npm run dev
 # ✔  Ready on http://localhost:3000
 ```
 
-Open **http://localhost:3000**, fill in your MySQL credentials, and start querying.
+Open **http://localhost:3000**, enter your database connection details, and start querying.
+
+> Supported at the connect screen: **MySQL**, **PostgreSQL**, **MongoDB**, **Elasticsearch**
 
 ### 4 — Docker Compose
 
@@ -250,12 +252,14 @@ docker-compose up --build
 # Backend  → http://localhost:3001
 ```
 
+> **Seed data** (optional): `seed-ecommerce-es.ps1` seeds a sample e-commerce dataset into Elasticsearch for testing.
+
 ---
 
 ## 🗂 Project Structure
 
 ```
-MySQL_Intelligence/
+DataIntel/
 │
 ├── 📁 backend/                         NestJS 10 API server
 │   └── src/
@@ -325,15 +329,15 @@ MySQL_Intelligence/
 │
 ├── docker-compose.yml
 ├── README.md                           This file
-├── DOCS.md                             Full implementation reference
-└── STUDY_GUIDE.md                      Deep module-by-module study guide
+├── TECHNICAL_DOCUMENTATION.md          Full technical reference
+└── DOCS.md                             Supplementary notes
 ```
 
 ---
 
 ## 🔒 Security Model
 
-### The 9 Validation Rules
+### The 10 SQL Validation Rules
 
 Every AI-generated SQL passes through `node-sql-parser` AST analysis. Cheap checks run first; all failures are collected before returning.
 
@@ -341,13 +345,14 @@ Every AI-generated SQL passes through `node-sql-parser` AST analysis. Cheap chec
 |:-:|---|---|
 | ① | **single-statement** | `SELECT 1; DROP TABLE users` — semicolon injection |
 | ② | **no-comments** | `SELECT * -- bypass` — comment-based predicate removal |
-| ③ | **select-only** | Any DML/DDL: INSERT · UPDATE · DELETE · DROP · CREATE |
-| ④ | **no-union** | `UNION SELECT password FROM credentials` — cross-table exfiltration |
-| ⑤ | **limit-required** | Unbounded full-table scans — *auto-patches `LIMIT 500`* |
-| ⑥ | **subquery-depth** | Deeply nested obfuscation (max nesting depth: 2) |
-| ⑦ | **table-exists** | Hallucinated tables, cross-session table guessing |
-| ⑧ | **column-exists** | Hallucinated column names, unqualified ambiguous refs |
-| ⑨ | **join-validation** | Invalid JOINs not backed by FK relationships in schema |
+| ③ | **no-placeholders** | `WHERE id = ?` or `{{var}}` — unfilled template values |
+| ④ | **select-only** | Any DML/DDL: INSERT · UPDATE · DELETE · DROP · CREATE |
+| ⑤ | **no-union** | `UNION SELECT password FROM credentials` — cross-table exfiltration |
+| ⑥ | **limit-required** | Unbounded full-table scans — *auto-patches `LIMIT 500`* |
+| ⑦ | **subquery-depth** | Deeply nested obfuscation (max nesting depth: 2) |
+| ⑧ | **table-exists** | Hallucinated tables, cross-session table guessing |
+| ⑨ | **column-exists** | Hallucinated column names, unqualified ambiguous refs |
+| ⑩ | **join-validation** | Invalid JOINs not backed by FK relationships in schema |
 
 ### Credential Encryption
 
@@ -496,7 +501,7 @@ Every AI-generated SQL passes through `node-sql-parser` AST analysis. Cheap chec
 <td>🤖 LLM</td>
 <td><strong>Cerebras</strong> gpt-oss-120b</td>
 <td>—</td>
-<td>Natural language → SQL · result interpretation · schema explain</td>
+<td>Natural language → query · schema-aware prompts · auto-retry on validation failure</td>
 </tr>
 <tr>
 <td>🔌 LLM SDK</td>
@@ -567,20 +572,16 @@ Every AI-generated SQL passes through `node-sql-parser` AST analysis. Cheap chec
 
 | Variable | Default | Required | Description |
 |---|---|:---:|---|
-| `CEREBRAS_API_KEY` | — | ✅ | Your Cerebras platform API key |
+| `CEREBRAS_API_KEY` | — | ✅ | Your Cerebras platform API key (`csk-...`) |
 | `PORT` | `3001` | — | API server port |
-| `CEREBRAS_API_URL` | `https://api.cerebras.ai/v1` | — | Cerebras API base URL |
-| `CEREBRAS_MODEL` | `gpt-oss-120b` | — | Model identifier |
-| `MCP_EXECUTION_TIMEOUT_MS` | `30000` | — | Max query execution time (ms) |
-| `MCP_MAX_RESULT_ROWS` | `500` | — | Maximum rows returned per query |
-| `MEMORY_SLIDING_WINDOW_SIZE` | `20` | — | Conversation context window size |
-| `MEMORY_SUMMARY_TOKEN_THRESHOLD` | `4000` | — | Token count that triggers auto-compaction |
+
+> The LLM model is fixed to `gpt-oss-120b` at `https://api.cerebras.ai/v1`.
 
 ### Frontend `frontend/.env.local`
 
 | Variable | Default | Description |
 |---|---|---|
-| `NEXT_PUBLIC_API_URL` | `http://localhost:3001/api` | Backend API URL |
+| `NEXT_PUBLIC_API_URL` | `http://localhost:3001` | Backend API base URL |
 
 ---
 
@@ -588,8 +589,8 @@ Every AI-generated SQL passes through `node-sql-parser` AST analysis. Cheap chec
 
 | Document | Description |
 |---|---|
-| **[DOCS.md](DOCS.md)** | Complete implementation reference — all modules, endpoints, types, storage strategy, and data flow diagrams |
-| **[STUDY_GUIDE.md](STUDY_GUIDE.md)** | Deep module-by-module study guide — every design decision, algorithm, and pattern explained with code examples |
+| **[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md)** | Full technical reference — all modules, types, validation rules, ES pipeline deep-dive, and accurate file inventory |
+| **[DOCS.md](DOCS.md)** | Implementation notes and supplementary reference |
 
 ---
 
@@ -603,6 +604,6 @@ Made with ☕ and too many late nights.
 
 ---
 
-[DOCS.md](DOCS.md) &nbsp;·&nbsp; [STUDY_GUIDE.md](STUDY_GUIDE.md)
+[TECHNICAL_DOCUMENTATION.md](TECHNICAL_DOCUMENTATION.md) &nbsp;·&nbsp; [DOCS.md](DOCS.md)
 
 </div>

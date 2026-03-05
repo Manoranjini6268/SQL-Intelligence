@@ -1,6 +1,6 @@
 # MySQL Intelligence — Complete Implementation Documentation
 
-> A natural-language-to-SQL query interface powered by Cerebras AI (gpt-oss-120b), NestJS, and Next.js 14 App Router.
+> A natural-language query interface powered by Cerebras AI (gpt-oss-120b), NestJS, and Next.js 14 App Router.
 
 ---
 
@@ -49,7 +49,7 @@
 ### Core capabilities
 | Capability | Description |
 |---|---|
-| NL → SQL | Cerebras gpt-oss-120b translates questions to validated SELECT queries |
+| NL → Query | Cerebras gpt-oss-120b translates questions to validated SELECT queries |
 | Safety validation | 9-rule AST engine rejects mutations, unbounded scans, injection attempts |
 | Schema awareness | Full schema compressed into every LLM prompt — tables, columns, FKs |
 | Conversation memory | Sliding 20-message window with automatic compaction |

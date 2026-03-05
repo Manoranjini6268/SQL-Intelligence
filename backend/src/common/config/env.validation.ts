@@ -29,7 +29,7 @@ export class EnvironmentVariables {
 
   @IsString()
   @IsOptional()
-  CEREBRAS_MODEL: string = 'llama-4-scout-17b-16e-instruct';
+  CEREBRAS_MODEL: string = 'gpt-oss-120b';
 
   @IsNumber()
   @IsOptional()

@@ -31,7 +31,7 @@ export class LLMService {
       baseURL,
     });
 
-    this.model = this.configService.get<string>('CEREBRAS_MODEL') ?? 'llama-4-scout-17b-16e-instruct';
+    this.model = this.configService.get<string>('CEREBRAS_MODEL') ?? 'gpt-oss-120b';
     this.logger.log(`LLM Service initialized — model: ${this.model}`);
   }
 
