@@ -31,6 +31,8 @@ import {
   X,
 } from 'lucide-react';
 
+const SCHEMA_CACHE_KEY = 'sqli_schema_topology';
+
 // ── Badge helpers ──────────────────────────────
 
 function Badge({
@@ -350,13 +352,35 @@ export default function SchemaPage() {
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
-    setLoading(true);
+    let hasCached = false;
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = sessionStorage.getItem(`${SCHEMA_CACHE_KEY}:${sessionId}`);
+        if (raw) {
+          const cached = JSON.parse(raw) as SchemaTopology;
+          setTopology(cached);
+          if (cached.tables.length > 0) setSelectedTable(cached.tables[0]);
+          hasCached = true;
+        }
+      } catch {
+        // ignore cache parsing errors
+      }
+    }
+
+    setLoading(!hasCached);
     setError(null);
     getSchema(sessionId)
       .then((data) => {
         if (cancelled) return;
         setTopology(data);
         if (data.tables.length > 0) setSelectedTable(data.tables[0]);
+        if (typeof window !== 'undefined') {
+          try {
+            sessionStorage.setItem(`${SCHEMA_CACHE_KEY}:${sessionId}`, JSON.stringify(data));
+          } catch {
+            // ignore storage quota errors
+          }
+        }
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -389,7 +413,7 @@ export default function SchemaPage() {
       const query = isES
         ? JSON.stringify({ _index: selectedTable.name, query: { match_all: {} }, size: 10 })
         : `SELECT * FROM \`${selectedTable.name}\` LIMIT 10`;
-      const result = await executeQuery(sessionId, query);
+      const result = await executeQuery(sessionId, query, undefined, true);
       setPreview(result);
     } catch {
       // silently ignore — user sees nothing loaded
@@ -577,6 +601,8 @@ export default function SchemaPage() {
               </div>
               <h2 className="font-semibold text-white">{isES ? 'AI Cluster Summary' : 'AI Database Summary'}</h2>
               <button
+                title="Close summary"
+                aria-label="Close summary"
                 onClick={() => setShowExplain(false)}
                 className="ml-auto rounded-md p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white transition-colors"
               >

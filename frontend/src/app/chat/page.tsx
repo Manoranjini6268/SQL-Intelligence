@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Send,
@@ -26,6 +27,7 @@ import {
   Sparkles,
   Copy,
   Check,
+  Shield,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -50,9 +52,16 @@ import {
   removePinnedQuery,
 } from '@/lib/storage';
 import type { PinnedQuery } from '@/lib/storage';
-import { GenerativeUIRenderer } from '@/components/generative-ui';
 import type { ChatMessage, ConnectorType, UIHint } from '@/lib/types';
 import { getConnectorFamily } from '@/lib/types';
+
+const GenerativeUIRenderer = dynamic(
+  () => import('@/components/generative-ui').then((m) => m.GenerativeUIRenderer),
+  {
+    ssr: false,
+    loading: () => <div className="h-40 animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/40" />,
+  },
+);
 
 /* ── Friendly error translator ────────────────────────── */
 function friendlyError(raw: string): string {
@@ -111,7 +120,8 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSQL, setShowSQL] = useState(true);
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [autoApprove, setAutoApprove] = useState(true);
+  const [dashboardEnabled, setDashboardEnabled] = useState(true);
   const [sidebarTab, setSidebarTab] = useState<'tables' | 'history'>('tables');
   const [pinnedQueries, setPinnedQueries] = useState<PinnedQuery[]>([]);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -128,10 +138,20 @@ export default function ChatPage() {
     if (prefill) { setInput(prefill); sessionStorage.removeItem('sqli_prefill'); setTimeout(() => inputRef.current?.focus(), 100); }
   }, []);
 
-  useEffect(() => { const s = loadSettings(); setShowSQL(s.showSQL); }, []);
+  useEffect(() => {
+    const s = loadSettings();
+    setShowSQL(s.showSQL);
+    setAutoApprove(s.autoApprove !== false);
+    setDashboardEnabled(s.dashboardEnabled !== false);
+  }, []);
 
   useEffect(() => {
-    const onFocus = () => { const s = loadSettings(); setShowSQL(s.showSQL); };
+    const onFocus = () => {
+      const s = loadSettings();
+      setShowSQL(s.showSQL);
+      setAutoApprove(s.autoApprove !== false);
+      setDashboardEnabled(s.dashboardEnabled !== false);
+    };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, []);
@@ -149,7 +169,7 @@ export default function ChatPage() {
           } else { disconnect(); router.push('/connect'); }
         }
       } catch { disconnect(); router.push('/connect'); }
-      finally { setSessionChecked(true); }
+      finally { /* session verified in background */ }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -181,10 +201,20 @@ export default function ChatPage() {
       activePlan = plan;
       if (plan.validationVerdict === 'REJECT') { patchLastMessage({ content: '', plan, isStreaming: false }); return; }
       if (plan.validationVerdict === 'CONVERSATIONAL') { patchLastMessage({ content: plan.explanation, plan, isStreaming: false }); return; }
-      patchLastMessage({ content: '', plan, isStreaming: true });
-      const result = await executeQuery(sessionId, plan.sql, prompt);
+      if (!autoApprove) {
+        patchLastMessage({
+          content: '',
+          plan,
+          pendingApproval: true,
+          isStreaming: false,
+        });
+        return;
+      }
+
+      patchLastMessage({ content: '', plan, pendingApproval: false, isStreaming: true });
+      const result = await executeQuery(sessionId, plan.sql, prompt, true);
       patchLastMessage({
-        content: '', plan, isStreaming: false,
+        content: '', plan, pendingApproval: false, isStreaming: false,
         execution: { ...result, confidence: plan.confidence ?? result.confidence, tables_used: result.tables_used.length ? result.tables_used : plan.tables_used ?? [] },
       });
     } catch (err) {
@@ -194,7 +224,7 @@ export default function ChatPage() {
           : friendlyError(err instanceof Error ? err.message : 'Something went wrong');
       patchLastMessage({ content: msg, plan: activePlan, isStreaming: false });
     } finally { setIsLoading(false); inputRef.current?.focus(); }
-  }, [input, sessionId, isLoading, pushMessage, patchLastMessage]);
+  }, [input, sessionId, isLoading, autoApprove, pushMessage, patchLastMessage]);
 
   const handleRerun = useCallback(async (message: ChatMessage) => {
     if (!message.plan?.sql || !sessionId || isLoading) return;
@@ -203,8 +233,9 @@ export default function ChatPage() {
     setIsLoading(true);
     patchMessageById(message.id, { isStreaming: true });
     try {
-      const result = await executeQuery(sessionId, message.plan.sql, origPrompt);
+      const result = await executeQuery(sessionId, message.plan.sql, origPrompt, true);
       patchMessageById(message.id, {
+        pendingApproval: false,
         isStreaming: false,
         execution: { ...result, confidence: message.plan.confidence ?? result.confidence, tables_used: result.tables_used.length ? result.tables_used : message.plan.tables_used ?? [] },
       });
@@ -220,15 +251,13 @@ export default function ChatPage() {
   }, [sessionId, disconnect, router]);
 
   /* ── Gate ────────────────────────────────────── */
-  if (!isConnected || !sessionChecked) {
+  if (!isConnected) {
     return (<div className="flex h-screen items-center justify-center bg-zinc-950"><Loader2 className="h-6 w-6 animate-spin text-zinc-500" /></div>);
   }
 
   const connectorFamily = connection?.connectorType ? getConnectorFamily(connection.connectorType as ConnectorType) : 'sql';
   const isES = connectorFamily === 'elasticsearch';
   const filteredTables = tables.filter((t) => t.name.toLowerCase().includes(searchTables.toLowerCase()));
-  const dashboardEnabled = typeof window !== 'undefined' ? (loadSettings() as any).dashboardEnabled !== false : true;
-
   /* ── Render ─────────────────────────────────── */
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-950">
@@ -321,7 +350,12 @@ export default function ChatPage() {
                         <button onClick={() => { setInput(pq.text); setSidebarTab('tables'); setTimeout(() => inputRef.current?.focus(), 50); }} className="flex-1 text-left">
                           <p className="text-[12px] text-zinc-300 line-clamp-2 leading-snug px-1.5">{pq.text}</p>
                         </button>
-                        <button onClick={() => { removePinnedQuery(pq.id); setPinnedQueries(loadPinnedQueries()); }} className="mt-0.5 shrink-0 rounded p-0.5 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-400">
+                        <button
+                          title="Remove pinned query"
+                          aria-label="Remove pinned query"
+                          onClick={() => { removePinnedQuery(pq.id); setPinnedQueries(loadPinnedQueries()); }}
+                          className="mt-0.5 shrink-0 rounded p-0.5 text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:text-zinc-400"
+                        >
                           <X className="h-3 w-3" />
                         </button>
                       </div>
@@ -422,7 +456,12 @@ export default function ChatPage() {
                 disabled={isLoading} autoFocus
                 className="border-zinc-800 bg-zinc-900/50 pr-10 text-zinc-200 placeholder:text-zinc-600 focus-visible:ring-emerald-500/30" />
               {input.trim() && (
-                <button onClick={() => setInput('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400">
+                <button
+                  title="Clear input"
+                  aria-label="Clear input"
+                  onClick={() => setInput('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400"
+                >
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -442,7 +481,7 @@ export default function ChatPage() {
             <div className="mb-4 flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10"><Keyboard className="h-3.5 w-3.5 text-emerald-400" /></div>
               <h2 className="font-semibold text-white">Keyboard Shortcuts</h2>
-              <button onClick={() => setShowShortcuts(false)} className="ml-auto rounded-md p-1.5 text-zinc-500 hover:bg-white/5"><X className="h-4 w-4" /></button>
+              <button title="Close shortcuts" aria-label="Close shortcuts" onClick={() => setShowShortcuts(false)} className="ml-auto rounded-md p-1.5 text-zinc-500 hover:bg-white/5"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-1">
               {[
@@ -566,6 +605,37 @@ function AssistantMessage({ message, showSQL, onRerun, onFollowUp, isLatest }: {
           <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
           <span className="h-1.5 w-1.5 rounded-full bg-zinc-500" />
         </motion.div>
+      </div>
+    );
+  }
+
+  if (message.plan && message.pendingApproval && !message.execution) {
+    return (
+      <div className="space-y-3">
+        <div className="flex gap-3">
+          <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10">
+            <Shield className="h-3.5 w-3.5 text-emerald-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-emerald-300">Query ready for approval</p>
+            <p className="mt-1 text-xs text-zinc-400">
+              Auto-approval is disabled. Review the query, then click Run Query.
+            </p>
+            {message.plan.explanation && (
+              <p className="mt-2 text-xs text-zinc-500">{message.plan.explanation}</p>
+            )}
+          </div>
+        </div>
+
+        {showSQL && message.plan.sql && <SQLBlock sql={message.plan.sql} />}
+
+        <button
+          onClick={() => onRerun(message)}
+          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-emerald-500"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Run Query
+        </button>
       </div>
     );
   }

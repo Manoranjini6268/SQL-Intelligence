@@ -13,6 +13,7 @@ export interface PersistedSettings {
   showSQL: boolean;
   rowLimit?: number;
   dashboardEnabled?: boolean;
+  autoApprove?: boolean;
 }
 
 // ── Connection Persistence ──────────────────
@@ -94,11 +95,13 @@ export function saveSettings(settings: PersistedSettings): void {
 }
 
 export function loadSettings(): PersistedSettings {
-  if (typeof window === 'undefined') return { showSQL: true, dashboardEnabled: true };
+  if (typeof window === 'undefined') return { showSQL: true, dashboardEnabled: true, autoApprove: true };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    return raw ? { showSQL: true, dashboardEnabled: true, ...JSON.parse(raw) } : { showSQL: true, dashboardEnabled: true };
-  } catch { return { showSQL: true, dashboardEnabled: true }; }
+    return raw
+      ? { showSQL: true, dashboardEnabled: true, autoApprove: true, ...JSON.parse(raw) }
+      : { showSQL: true, dashboardEnabled: true, autoApprove: true };
+  } catch { return { showSQL: true, dashboardEnabled: true, autoApprove: true }; }
 }
 
 // ── Connection History ──────────────────────

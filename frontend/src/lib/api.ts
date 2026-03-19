@@ -95,7 +95,7 @@ export async function executeQuery(
   sessionId: string,
   sql: string,
   prompt?: string,
-  approved: boolean = true,
+  approved: boolean = false,
 ): Promise<QueryExecutionResult> {
   const response = await fetch(`${API_BASE}/query/execute`, {
     method: 'POST',

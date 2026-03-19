@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 // Create an OpenAI-compatible client pointing at Cerebras
 const cerebras = new OpenAI({
   apiKey: process.env.CEREBRAS_API_KEY || '',
-  baseURL: process.env.CEREBRAS_API_URL || 'https://api.cerebras.ai/v1',
+  baseURL: process.env.CEREBRAS_API_URL || 'https://api.cerebras.ai',
 });
 
 const serviceAdapter = new OpenAIAdapter({

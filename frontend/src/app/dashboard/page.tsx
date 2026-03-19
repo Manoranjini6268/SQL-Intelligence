@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { motion } from 'framer-motion';
 import {
   DndContext,
@@ -14,7 +15,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { ResponsiveGridLayout, type LayoutItem } from 'react-grid-layout';
-import { toPng } from 'html-to-image';
 import {
   Zap,
   MessageSquare,
@@ -38,8 +38,6 @@ import {
   Camera,
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useCopilotAction, useCopilotReadable } from '@copilotkit/react-core';
-import { CopilotPopup } from '@copilotkit/react-ui';
 import { useSession } from '@/hooks/use-session';
 import {
   getDashboardWidgets,
@@ -49,11 +47,35 @@ import {
   getConnectionStatus,
 } from '@/lib/api';
 import { loadParams } from '@/lib/storage';
-import { GenerativeUIRenderer } from '@/components/generative-ui';
-import { WidgetPalette, type PaletteItem } from '@/components/dashboard/widget-palette';
-import { WidgetPromptDialog } from '@/components/dashboard/widget-prompt-dialog';
+import type { PaletteItem } from '@/components/dashboard/widget-palette';
 import type { ConnectorType, DashboardWidgetResult, UIHint } from '@/lib/types';
 import { getConnectorFamily } from '@/lib/types';
+
+const GenerativeUIRenderer = dynamic(
+  () => import('@/components/generative-ui').then((m) => m.GenerativeUIRenderer),
+  {
+    ssr: false,
+    loading: () => <div className="h-44 animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/40" />,
+  },
+);
+
+const WidgetPalette = dynamic(
+  () => import('@/components/dashboard/widget-palette').then((m) => m.WidgetPalette),
+  {
+    ssr: false,
+    loading: () => <div className="h-72 animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/40" />,
+  },
+);
+
+const WidgetPromptDialog = dynamic(
+  () => import('@/components/dashboard/widget-prompt-dialog').then((m) => m.WidgetPromptDialog),
+  { ssr: false },
+);
+
+const DashboardCopilot = dynamic(
+  () => import('@/components/dashboard/dashboard-copilot').then((m) => m.DashboardCopilot),
+  { ssr: false },
+);
 
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -101,7 +123,6 @@ export default function DashboardPage() {
     connect: setConnected,
   } = useSession();
 
-  const [sessionChecked, setSessionChecked] = useState(false);
   const [widgetResults, setWidgetResults] = useState<DashboardWidgetResult[]>([]);
   const [layouts, setLayouts] = useState<LayoutItem[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -113,6 +134,8 @@ export default function DashboardPage() {
   const [editingWidget, setEditingWidget] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [copilotEnabled, setCopilotEnabled] = useState(false);
+  const [openCopilotOnMount, setOpenCopilotOnMount] = useState(false);
   const widgetRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const contentRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
@@ -120,47 +143,6 @@ export default function DashboardPage() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
-
-  // ── CopilotKit context ──
-  useCopilotReadable({
-    description: 'Database tables and schema available for querying',
-    value: JSON.stringify({
-      database: connection?.database,
-      connectorType: connection?.connectorType,
-      tables: tables.map((t) => ({ name: t.name, columns: t.columnCount })),
-    }),
-  });
-
-  useCopilotReadable({
-    description: 'Current dashboard widgets displayed',
-    value: JSON.stringify(widgetResults.map((w) => ({ title: w.title, type: w.ui_hint }))),
-  });
-
-  useCopilotAction({
-    name: 'addDashboardWidget',
-    description: 'Add a new visualization widget to the dashboard.',
-    parameters: [
-      { name: 'prompt', type: 'string', description: 'Description of what data to show', required: true },
-      { name: 'widgetType', type: 'string', description: 'One of: metric_card, bar_chart, line_chart, pie_chart, area_chart, data_table, list, stat_grid, donut_chart, stacked_bar, horizontal_bar, scatter_plot, radar_chart, gauge, number_trend, comparison_card, funnel_chart, timeline, treemap', required: true },
-      { name: 'size', type: 'string', description: 'Widget size: sm, md, or lg', required: false },
-    ],
-    handler: async ({ prompt, widgetType, size }) => {
-      const uiHint: UIHint = widgetType as UIHint;
-      const widgetSize = (['sm', 'md', 'lg'] as const).includes(size as any) ? (size as 'sm' | 'md' | 'lg') : 'md';
-      await addWidget(prompt, uiHint, widgetSize);
-      return `Widget "${prompt}" added to dashboard.`;
-    },
-  });
-
-  useCopilotAction({
-    name: 'regenerateDashboard',
-    description: 'Regenerate all dashboard widgets with fresh AI-generated insights.',
-    parameters: [],
-    handler: async () => {
-      await generateDashboard();
-      return 'Dashboard regenerated.';
-    },
-  });
 
   // Session verification
   useEffect(() => {
@@ -176,16 +158,16 @@ export default function DashboardPage() {
           } else { disconnect(); router.push('/connect'); }
         }
       } catch { disconnect(); router.push('/connect'); }
-      finally { setSessionChecked(true); }
+      finally { /* session verified in background */ }
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (sessionChecked && isConnected && sessionId && !initialized.current) {
+    if (isConnected && sessionId && !initialized.current) {
       initialized.current = true;
       generateDashboard();
     }
-  }, [sessionChecked, isConnected, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isConnected, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ── Build layout from widget results (bin-packing) ── */
   const buildLayoutForWidgets = useCallback((widgets: DashboardWidgetResult[]): LayoutItem[] => {
@@ -280,6 +262,7 @@ export default function DashboardPage() {
     const el = widgetRefs.current[id];
     if (!el) return;
     try {
+      const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(el, { backgroundColor: '#09090b', pixelRatio: 2 });
       const link = document.createElement('a');
       link.download = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
@@ -293,6 +276,7 @@ export default function DashboardPage() {
     if (!el || isDownloading) return;
     setIsDownloading(true);
     try {
+      const { toPng } = await import('html-to-image');
       const dataUrl = await toPng(el, {
         backgroundColor: '#09090b',
         pixelRatio: 2,
@@ -336,7 +320,7 @@ export default function DashboardPage() {
     setEditingWidget(null);
   }, [editTitle]);
 
-  if (!isConnected || !sessionChecked) {
+  if (!isConnected) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-950">
         <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
@@ -439,6 +423,18 @@ export default function DashboardPage() {
                 {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                 Export
               </button>
+              {!copilotEnabled && (
+                <button
+                  onClick={() => {
+                    setCopilotEnabled(true);
+                    setOpenCopilotOnMount(true);
+                  }}
+                  className="flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-300 transition-colors hover:bg-indigo-500/20"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  Enable AI Assistant
+                </button>
+              )}
               <button onClick={generateDashboard} disabled={isGenerating} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:opacity-50">
                 {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
                 {isGenerating ? 'Generating…' : 'Regenerate'}
@@ -497,20 +493,17 @@ export default function DashboardPage() {
         />
       )}
 
-      <CopilotPopup
-        instructions={`You are DataIntel AI assistant. You help users build dashboard visualizations.
-The user is connected to a ${connection?.connectorType || 'database'} database called "${connection?.database || 'unknown'}".
-Available tables/indices: ${tables.map((t) => t.name).join(', ')}.
-When the user asks to see data, use the addDashboardWidget action with a clear prompt describing what to query.
-Choose the best widget type for the data.
-Keep responses friendly and concise.`}
-        labels={{
-          title: 'DataIntel AI',
-          placeholder: 'Ask me to add charts, metrics, or explore your data…',
-        }}
-        defaultOpen={false}
-        clickOutsideToClose
-      />
+      {copilotEnabled && (
+        <DashboardCopilot
+          database={connection?.database}
+          connectorType={connection?.connectorType}
+          tables={tables}
+          widgetResults={widgetResults}
+          addWidget={addWidget}
+          regenerateDashboard={generateDashboard}
+          openOnMount={openCopilotOnMount}
+        />
+      )}
     </DndContext>
   );
 }
@@ -651,6 +644,9 @@ function DashboardDropZone({
                   {editingWidget === widget.id && (
                     <div className="absolute inset-x-0 top-0 z-30 flex items-center gap-1 bg-zinc-900 p-2 border-b border-zinc-800/60">
                       <input
+                        title="Widget title"
+                        aria-label="Widget title"
+                        placeholder="Widget title"
                         autoFocus
                         value={editTitle}
                         onChange={(e) => onChangeEditTitle(e.target.value)}

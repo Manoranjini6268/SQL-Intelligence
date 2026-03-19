@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Code2, Database, RefreshCw, Keyboard, BarChart2, Layers, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Code2, Database, RefreshCw, Keyboard, BarChart2, Layers, LayoutDashboard, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { loadSettings, saveSettings, clearPersistedConnection } from '@/lib/storage';
 import type { PersistedSettings } from '@/lib/storage';
@@ -22,6 +22,7 @@ export default function SettingsPage() {
   const [showSQL, setShowSQL] = useState(true);
   const [rowLimit, setRowLimit] = useState<RowLimit>(500);
   const [dashboardEnabled, setDashboardEnabled] = useState(true);
+  const [autoApprove, setAutoApprove] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -29,11 +30,12 @@ export default function SettingsPage() {
     setShowSQL(s.showSQL);
     setRowLimit((s.rowLimit as RowLimit) ?? 500);
     setDashboardEnabled(s.dashboardEnabled !== false);
+    setAutoApprove(s.autoApprove !== false);
     setLoaded(true);
   }, []);
 
   const save = (patch: Partial<PersistedSettings>) => {
-    const next: PersistedSettings = { showSQL, rowLimit, dashboardEnabled, ...patch };
+    const next: PersistedSettings = { showSQL, rowLimit, dashboardEnabled, autoApprove, ...patch };
     saveSettings(next);
   };
 
@@ -52,6 +54,12 @@ export default function SettingsPage() {
     const next = !dashboardEnabled;
     setDashboardEnabled(next);
     save({ dashboardEnabled: next });
+  };
+
+  const handleToggleAutoApprove = () => {
+    const next = !autoApprove;
+    setAutoApprove(next);
+    save({ autoApprove: next });
   };
 
   const handleClearSession = () => {
@@ -98,6 +106,13 @@ export default function SettingsPage() {
                 description="Display the generated SQL or ES DSL alongside results"
                 checked={showSQL}
                 onToggle={handleToggleSQL}
+              />
+              <SettingRow
+                icon={<ShieldCheck className="h-4 w-4 text-primary" />}
+                title="Auto-Approve Query Execution"
+                description="Automatically run validated queries without waiting for manual approval"
+                checked={autoApprove}
+                onToggle={handleToggleAutoApprove}
               />
             </div>
           </section>
