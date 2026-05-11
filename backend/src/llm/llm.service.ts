@@ -1,5 +1,5 @@
 // ──────────────────────────────────────────────
-// LLM Service — Cerebras Inference Orchestration
+// LLM Service — OpenRouter Inference Orchestration
 // ──────────────────────────────────────────────
 
 import { Injectable, Logger } from '@nestjs/common';
@@ -19,11 +19,11 @@ export class LLMService {
     private readonly configService: ConfigService,
     private readonly promptBuilder: PromptBuilderService,
   ) {
-    const apiKey = this.configService.get<string>('CEREBRAS_API_KEY');
-    const baseURL = this.configService.get<string>('CEREBRAS_API_URL');
+    const apiKey = this.configService.get<string>('OPEN_ROUTER_KEY');
+    const baseURL = this.configService.get<string>('OPEN_ROUTER_API_URL');
 
     if (!apiKey) {
-      throw new Error('CEREBRAS_API_KEY is required');
+      throw new Error('OPEN_ROUTER_KEY is required');
     }
 
     this.client = new OpenAI({
@@ -31,7 +31,8 @@ export class LLMService {
       baseURL,
     });
 
-    this.model = this.configService.get<string>('CEREBRAS_MODEL') ?? 'gpt-oss-120b';
+    this.model =
+      this.configService.get<string>('OPEN_ROUTER_MODEL') ?? 'openai/gpt-oss-120b';
     this.logger.log(`LLM Service initialized — model: ${this.model}`);
   }
 

@@ -20,16 +20,16 @@ export class EnvironmentVariables {
   PORT: number = 3001;
 
   @IsString()
-  @IsNotEmpty({ message: 'CEREBRAS_API_KEY must not be empty' })
-  CEREBRAS_API_KEY!: string;
+  @IsNotEmpty({ message: 'OPEN_ROUTER_KEY must not be empty' })
+  OPEN_ROUTER_KEY!: string;
 
   @IsString()
   @IsOptional()
-  CEREBRAS_API_URL: string = 'https://api.cerebras.ai/v1';
+  OPEN_ROUTER_API_URL: string = 'https://openrouter.ai/api/v1';
 
   @IsString()
   @IsOptional()
-  CEREBRAS_MODEL: string = 'gpt-oss-120b';
+  OPEN_ROUTER_MODEL: string = 'openai/gpt-oss-120b';
 
   @IsNumber()
   @IsOptional()
